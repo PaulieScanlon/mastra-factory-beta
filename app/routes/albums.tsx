@@ -43,7 +43,11 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
           <h1 className="font-display text-5xl mt-2">Albums</h1>
         </div>
         <div className="flex items-center gap-2">
+          <label htmlFor="album-search" className="sr-only">
+            Search title or artist
+          </label>
           <input
+            id="album-search"
             type="search"
             value={q}
             onChange={(e) => {
