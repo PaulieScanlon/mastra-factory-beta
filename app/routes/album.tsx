@@ -1,4 +1,5 @@
-import { Form, Link, redirect } from "react-router";
+import { useState } from "react";
+import { Form, Link, redirect, useSubmit } from "react-router";
 import type { Route } from "./+types/album";
 import {
   createListen,
@@ -10,6 +11,7 @@ import {
 } from "../lib/db.server";
 import { searchTrack } from "../lib/spotify.server";
 import { AlbumCover } from "../components/album-cover";
+import { ConfirmDialog } from "../components/confirm-dialog";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Album — Riff" }];
@@ -67,6 +69,8 @@ const stars = (rating: number | null) => {
 
 export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
   const { album, listens, spotifyTrackId } = loaderData;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const submit = useSubmit();
 
   return (
     <div className="space-y-10">
@@ -186,8 +190,7 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
         </ol>
       </div>
 
-      <Form method="post" className="pt-8 border-t border-white/5">
-        <input type="hidden" name="intent" value="delete" />
+      <div className="pt-8 border-t border-white/5">
         <div className="flex items-center justify-between">
           <div>
             <Link to="/albums" className="text-sm text-white/50 hover:text-white transition">
@@ -195,18 +198,23 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
             </Link>
           </div>
           <button
-            type="submit"
+            type="button"
             className="text-xs text-red-400/70 hover:text-red-300 uppercase tracking-widest"
-            onClick={(e) => {
-              if (!confirm("Delete this album and all its listens?")) {
-                e.preventDefault();
-              }
-            }}
+            onClick={() => setConfirmingDelete(true)}
           >
             Delete album
           </button>
         </div>
-      </Form>
+      </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Delete album?"
+        description="This permanently removes the album and all its listens."
+        confirmLabel="Delete album"
+        onConfirm={() => submit({ intent: "delete" }, { method: "post" })}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </div>
   );
 }
