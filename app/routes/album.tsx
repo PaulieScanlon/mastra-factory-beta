@@ -1,4 +1,5 @@
-import { Form, Link, redirect } from "react-router";
+import { Suspense } from "react";
+import { Await, Form, Link, redirect } from "react-router";
 import type { Route } from "./+types/album";
 import {
   createListen,
@@ -22,14 +23,17 @@ export const loader = async ({ params }: Route.LoaderArgs) => {
     throw new Response("Not found", { status: 404 });
   }
   const row = getAlbumRow(id);
-  let spotifyTrackId = row?.spotify_track_id ?? null;
-  if (!spotifyTrackId) {
-    const found = await searchTrack(album.title, album.artist);
-    if (found) {
-      setSpotifyTrackId(id, found);
-      spotifyTrackId = found;
-    }
-  }
+  const cached = row?.spotify_track_id ?? null;
+  const spotifyTrackId = cached
+    ? Promise.resolve<string | null>(cached)
+    : searchTrack(album.title, album.artist)
+        .then((found) => {
+          if (found) {
+            setSpotifyTrackId(id, found);
+          }
+          return found;
+        })
+        .catch(() => null);
   const listens = listListensForAlbum(id);
   return { album, listens, spotifyTrackId };
 };
@@ -58,6 +62,12 @@ export const action = async ({ params, request }: Route.ActionArgs) => {
   return null;
 };
 
+const EmbedPlaceholder = () => {
+  return (
+    <div className="h-[80px] rounded-2xl border border-white/10 bg-white/[0.03] animate-pulse" />
+  );
+};
+
 const stars = (rating: number | null) => {
   if (!rating) {
     return "—";
@@ -73,19 +83,25 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
       <div className="grid md:grid-cols-[320px_1fr] gap-10 items-start">
         <div className="max-w-sm space-y-4">
           <AlbumCover title={album.title} artist={album.artist} palette={album.palette} size="lg" />
-          {spotifyTrackId ? (
-            <div className="rounded-2xl overflow-hidden border border-white/10">
-              <iframe
-                title={`Spotify preview: ${album.title}`}
-                src={`https://open.spotify.com/embed/track/${spotifyTrackId}?utm_source=riff`}
-                width="100%"
-                height="80"
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                loading="lazy"
-                style={{ border: 0 }}
-              />
-            </div>
-          ) : null}
+          <Suspense fallback={<EmbedPlaceholder />}>
+            <Await resolve={spotifyTrackId} errorElement={null}>
+              {(trackId) =>
+                trackId ? (
+                  <div className="rounded-2xl overflow-hidden border border-white/10">
+                    <iframe
+                      title={`Spotify preview: ${album.title}`}
+                      src={`https://open.spotify.com/embed/track/${trackId}?utm_source=riff`}
+                      width="100%"
+                      height="80"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      loading="lazy"
+                      style={{ border: 0 }}
+                    />
+                  </div>
+                ) : null
+              }
+            </Await>
+          </Suspense>
         </div>
         <div className="space-y-6">
           <div>
