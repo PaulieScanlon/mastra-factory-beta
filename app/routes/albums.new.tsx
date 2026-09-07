@@ -2,7 +2,16 @@ import { Form, Link, redirect } from "react-router";
 import type { Route } from "./+types/albums.new";
 import { createAlbum } from "../lib/db.server";
 
-const palettes = ["ember", "aurora", "storm", "citrus", "mono", "violet", "coast", "rust"];
+const palettes = [
+  { name: "ember", description: "Orange & deep red" },
+  { name: "aurora", description: "Cyan, violet & green" },
+  { name: "storm", description: "Slate & midnight blue" },
+  { name: "citrus", description: "Yellow, orange & pink" },
+  { name: "mono", description: "Greyscale" },
+  { name: "violet", description: "Purple & indigo" },
+  { name: "coast", description: "Cyan & ocean blue" },
+  { name: "rust", description: "Amber & dark brown" }
+];
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "New album — Riff" }];
@@ -54,22 +63,25 @@ export default function NewAlbum({ actionData }: Route.ComponentProps) {
 
         <div>
           <label className="text-xs uppercase tracking-widest text-white/40 block mb-3">Cover palette</label>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
-            {palettes.map((p, i) => {
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {palettes.map(({ name, description }, i) => {
               return (
-                <label key={p} className="cursor-pointer">
+                <label key={name} className="cursor-pointer" title={name}>
                   <input
                     type="radio"
                     name="palette"
-                    value={p}
+                    value={name}
                     defaultChecked={i === 0}
                     className="peer sr-only"
                   />
                   <div
-                    className={`cover palette-${p} aspect-square rounded-lg border-2 border-transparent peer-checked:border-white transition`}
+                    className={`cover palette-${name} aspect-square rounded-lg border-2 border-transparent peer-checked:border-white transition`}
                   />
                   <div className="text-[10px] uppercase tracking-widest text-white/40 text-center mt-1">
-                    {p}
+                    {name}
+                  </div>
+                  <div className="text-[10px] text-white/30 text-center leading-tight">
+                    {description}
                   </div>
                 </label>
               );
