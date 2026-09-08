@@ -1,6 +1,7 @@
 import { Form, Link, redirect } from "react-router";
 import type { Route } from "./+types/albums.new";
 import { createAlbum } from "../lib/db.server";
+import { setToast } from "../lib/toast.server";
 
 const palettes = ["ember", "aurora", "storm", "citrus", "mono", "violet", "coast", "rust"];
 
@@ -30,7 +31,9 @@ export const action = async ({ request }: Route.ActionArgs) => {
     notes: notes || null
   });
 
-  return redirect(`/albums/${id}`);
+  return redirect(`/albums/${id}`, {
+    headers: { "Set-Cookie": await setToast(request, "Album added") }
+  });
 };
 
 export default function NewAlbum({ actionData }: Route.ComponentProps) {

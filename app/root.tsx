@@ -1,15 +1,24 @@
 import {
+  data,
   isRouteErrorResponse,
   Links,
   Meta,
   Outlet,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
+  useLocation
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import { Nav } from "./components/nav";
+import { Toast } from "./components/toast";
+import { getToast } from "./lib/toast.server";
 import "./app.css";
+
+export const loader = async ({ request }: Route.LoaderArgs) => {
+  const { message, headers } = await getToast(request);
+  return data({ toast: message }, { headers });
+};
 
 export const links: Route.LinksFunction = () => {
   return [
@@ -42,13 +51,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
+export default function App({ loaderData }: Route.ComponentProps) {
+  const location = useLocation();
   return (
     <>
       <Nav />
       <main className="max-w-6xl mx-auto px-6 py-10">
         <Outlet />
       </main>
+      {loaderData.toast ? (
+        <Toast key={`${loaderData.toast}-${location.key}`} message={loaderData.toast} />
+      ) : null}
     </>
   );
 }

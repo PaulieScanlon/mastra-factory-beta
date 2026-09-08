@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form, Link, redirect, useSubmit } from "react-router";
+import { data, Form, Link, redirect, useSubmit } from "react-router";
 import type { Route } from "./+types/album";
 import {
   createListen,
@@ -10,6 +10,7 @@ import {
   setSpotifyTrackId
 } from "../lib/db.server";
 import { searchTrack } from "../lib/spotify.server";
+import { setToast } from "../lib/toast.server";
 import { AlbumCover } from "../components/album-cover";
 import { ConfirmDialog } from "../components/confirm-dialog";
 
@@ -49,7 +50,9 @@ export const action = async ({ params, request }: Route.ActionArgs) => {
       rating: ratingRaw ? Number(ratingRaw) : null,
       notes: typeof notes === "string" && notes.length > 0 ? notes : null
     });
-    return null;
+    return data(null, {
+      headers: { "Set-Cookie": await setToast(request, "Listen logged") }
+    });
   }
 
   if (intent === "delete") {
