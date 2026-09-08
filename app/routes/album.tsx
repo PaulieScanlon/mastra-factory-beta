@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Form, Link, redirect, useSubmit } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { Link, redirect, useFetcher, useSubmit } from "react-router";
 import type { Route } from "./+types/album";
 import {
   createListen,
@@ -49,7 +49,7 @@ export const action = async ({ params, request }: Route.ActionArgs) => {
       rating: ratingRaw ? Number(ratingRaw) : null,
       notes: typeof notes === "string" && notes.length > 0 ? notes : null
     });
-    return null;
+    return { ok: true };
   }
 
   if (intent === "delete") {
@@ -71,6 +71,14 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
   const { album, listens, spotifyTrackId } = loaderData;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const submit = useSubmit();
+  const fetcher = useFetcher<typeof action>();
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data?.ok) {
+      formRef.current?.reset();
+    }
+  }, [fetcher.state, fetcher.data]);
 
   return (
     <div className="space-y-10">
@@ -116,7 +124,11 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
             />
           </div>
 
-          <Form method="post" className="mt-4 p-5 rounded-2xl border border-white/10 bg-white/[0.03] space-y-4">
+          <fetcher.Form
+            method="post"
+            ref={formRef}
+            className="mt-4 p-5 rounded-2xl border border-white/10 bg-white/[0.03] space-y-4"
+          >
             <input type="hidden" name="intent" value="listen" />
             <div className="flex items-center justify-between">
               <h3 className="font-display text-xl">Log a listen</h3>
@@ -149,12 +161,13 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
               </div>
               <button
                 type="submit"
-                className="self-end px-5 py-2 rounded-full text-sm text-black bg-white hover:bg-white/90 transition"
+                disabled={fetcher.state !== "idle"}
+                className="self-end px-5 py-2 rounded-full text-sm text-black bg-white hover:bg-white/90 transition disabled:opacity-50"
               >
                 Log
               </button>
             </div>
-          </Form>
+          </fetcher.Form>
         </div>
       </div>
 
