@@ -158,6 +158,18 @@ export const createListen = (input: {
   return result.lastInsertRowid as number;
 };
 
+export const updateListen = (
+  id: number,
+  input: { rating: number | null; notes: string | null }
+) => {
+  db.prepare("UPDATE listens SET rating = ?, notes = ? WHERE id = ?")
+    .run(input.rating, input.notes, id);
+};
+
+export const deleteListen = (id: number) => {
+  db.prepare("DELETE FROM listens WHERE id = ?").run(id);
+};
+
 export const deleteAlbum = (id: number) => {
   db.prepare("DELETE FROM albums WHERE id = ?").run(id);
 };

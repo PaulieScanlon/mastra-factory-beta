@@ -4,14 +4,17 @@ import type { Route } from "./+types/album";
 import {
   createListen,
   deleteAlbum,
+  deleteListen,
   getAlbum,
   getAlbumRow,
   listListensForAlbum,
-  setSpotifyTrackId
+  setSpotifyTrackId,
+  updateListen
 } from "../lib/db.server";
 import { searchTrack } from "../lib/spotify.server";
 import { AlbumCover } from "../components/album-cover";
 import { ConfirmDialog } from "../components/confirm-dialog";
+import { ListenEditForm } from "../components/listen-edit-form";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Album — Riff" }];
@@ -57,6 +60,22 @@ export const action = async ({ params, request }: Route.ActionArgs) => {
     return redirect("/albums");
   }
 
+  if (intent === "edit-listen") {
+    const listenId = Number(form.get("listenId"));
+    const ratingRaw = form.get("rating");
+    const notes = form.get("notes");
+    updateListen(listenId, {
+      rating: ratingRaw ? Number(ratingRaw) : null,
+      notes: typeof notes === "string" && notes.length > 0 ? notes : null
+    });
+    return null;
+  }
+
+  if (intent === "delete-listen") {
+    deleteListen(Number(form.get("listenId")));
+    return null;
+  }
+
   return null;
 };
 
@@ -70,6 +89,8 @@ const stars = (rating: number | null) => {
 export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
   const { album, listens, spotifyTrackId } = loaderData;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [editingListenId, setEditingListenId] = useState<number | null>(null);
+  const [confirmingDeleteListenId, setConfirmingDeleteListenId] = useState<number | null>(null);
   const submit = useSubmit();
 
   return (
@@ -175,10 +196,37 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
                     minute: "2-digit"
                   })}
                 </div>
-                <div className="text-yellow-300 font-mono text-sm w-24 shrink-0">
-                  {stars(l.rating)}
-                </div>
-                <div className="text-white/70 text-sm truncate">{l.notes ?? " "}</div>
+                {editingListenId === l.id ? (
+                  <ListenEditForm
+                    listenId={l.id}
+                    initialRating={l.rating}
+                    initialNotes={l.notes}
+                    onDone={() => setEditingListenId(null)}
+                  />
+                ) : (
+                  <>
+                    <div className="text-yellow-300 font-mono text-sm w-24 shrink-0">
+                      {stars(l.rating)}
+                    </div>
+                    <div className="text-white/70 text-sm truncate flex-1">{l.notes ?? " "}</div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setEditingListenId(l.id)}
+                        className="text-xs uppercase tracking-widest text-white/40 hover:text-white transition"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingDeleteListenId(l.id)}
+                        className="text-xs uppercase tracking-widest text-red-400/70 hover:text-red-300 transition"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
               </li>
             );
           })}
@@ -214,6 +262,21 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
         confirmLabel="Delete album"
         onConfirm={() => submit({ intent: "delete" }, { method: "post" })}
         onCancel={() => setConfirmingDelete(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmingDeleteListenId !== null}
+        title="Delete listen?"
+        description="This permanently removes this listen."
+        confirmLabel="Delete listen"
+        onConfirm={() => {
+          submit(
+            { intent: "delete-listen", listenId: String(confirmingDeleteListenId) },
+            { method: "post" }
+          );
+          setConfirmingDeleteListenId(null);
+        }}
+        onCancel={() => setConfirmingDeleteListenId(null)}
       />
     </div>
   );

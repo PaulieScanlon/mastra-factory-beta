@@ -1,6 +1,9 @@
-import { Link } from "react-router";
+import { useState } from "react";
+import { Link, useSubmit } from "react-router";
 import type { Route } from "./+types/listens";
-import { listRecentListens } from "../lib/db.server";
+import { deleteListen, listRecentListens, updateListen } from "../lib/db.server";
+import { ConfirmDialog } from "../components/confirm-dialog";
+import { ListenEditForm } from "../components/listen-edit-form";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Listens — Riff" }];
@@ -8,6 +11,29 @@ export const meta: Route.MetaFunction = () => {
 
 export const loader = () => {
   return { listens: listRecentListens(200) };
+};
+
+export const action = async ({ request }: Route.ActionArgs) => {
+  const form = await request.formData();
+  const intent = form.get("intent");
+
+  if (intent === "edit-listen") {
+    const listenId = Number(form.get("listenId"));
+    const ratingRaw = form.get("rating");
+    const notes = form.get("notes");
+    updateListen(listenId, {
+      rating: ratingRaw ? Number(ratingRaw) : null,
+      notes: typeof notes === "string" && notes.length > 0 ? notes : null
+    });
+    return null;
+  }
+
+  if (intent === "delete-listen") {
+    deleteListen(Number(form.get("listenId")));
+    return null;
+  }
+
+  return null;
 };
 
 const groupByDay = <T extends { listened_at: string }>(items: T[]) => {
@@ -31,6 +57,9 @@ const stars = (n: number | null) => {
 
 export default function Listens({ loaderData }: Route.ComponentProps) {
   const groups = groupByDay(loaderData.listens);
+  const [editingListenId, setEditingListenId] = useState<number | null>(null);
+  const [confirmingDeleteListenId, setConfirmingDeleteListenId] = useState<number | null>(null);
+  const submit = useSubmit();
 
   return (
     <div className="space-y-10">
@@ -54,31 +83,64 @@ export default function Listens({ loaderData }: Route.ComponentProps) {
               <ul className="space-y-3">
                 {items.map((l) => {
                   return (
-                    <li key={l.id}>
-                      <Link
-                        to={`/albums/${l.album_id}`}
-                        className="group flex items-center gap-4 p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition"
-                      >
-                        <div className={`cover palette-${l.palette} w-12 h-12 rounded-lg shrink-0`} />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate">
-                            <span className="font-medium">{l.album_title}</span>
-                            <span className="text-white/50"> — {l.album_artist}</span>
+                    <li
+                      key={l.id}
+                      className="group flex items-center gap-4 p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition"
+                    >
+                      {editingListenId === l.id ? (
+                        <>
+                          <div className={`cover palette-${l.palette} w-12 h-12 rounded-lg shrink-0`} />
+                          <ListenEditForm
+                            listenId={l.id}
+                            initialRating={l.rating}
+                            initialNotes={l.notes}
+                            onDone={() => setEditingListenId(null)}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <Link
+                            to={`/albums/${l.album_id}`}
+                            className="flex items-center gap-4 min-w-0 flex-1"
+                          >
+                            <div className={`cover palette-${l.palette} w-12 h-12 rounded-lg shrink-0`} />
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate">
+                                <span className="font-medium">{l.album_title}</span>
+                                <span className="text-white/50"> — {l.album_artist}</span>
+                              </div>
+                              {l.notes ? (
+                                <div className="text-xs text-white/50 italic mt-1 truncate">"{l.notes}"</div>
+                              ) : null}
+                            </div>
+                            <div className="text-xs text-white/40 tabular-nums shrink-0">
+                              {new Date(l.listened_at).toLocaleTimeString(undefined, {
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}
+                            </div>
+                            <div className="text-yellow-300 text-sm w-16 text-right shrink-0">
+                              {stars(l.rating)}
+                            </div>
+                          </Link>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingListenId(l.id)}
+                              className="text-xs uppercase tracking-widest text-white/40 hover:text-white transition"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmingDeleteListenId(l.id)}
+                              className="text-xs uppercase tracking-widest text-red-400/70 hover:text-red-300 transition"
+                            >
+                              Delete
+                            </button>
                           </div>
-                          {l.notes ? (
-                            <div className="text-xs text-white/50 italic mt-1 truncate">"{l.notes}"</div>
-                          ) : null}
-                        </div>
-                        <div className="text-xs text-white/40 tabular-nums shrink-0">
-                          {new Date(l.listened_at).toLocaleTimeString(undefined, {
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })}
-                        </div>
-                        <div className="text-yellow-300 text-sm w-16 text-right shrink-0">
-                          {stars(l.rating)}
-                        </div>
-                      </Link>
+                        </>
+                      )}
                     </li>
                   );
                 })}
@@ -92,6 +154,21 @@ export default function Listens({ loaderData }: Route.ComponentProps) {
           </li>
         ) : null}
       </ol>
+
+      <ConfirmDialog
+        open={confirmingDeleteListenId !== null}
+        title="Delete listen?"
+        description="This permanently removes this listen."
+        confirmLabel="Delete listen"
+        onConfirm={() => {
+          submit(
+            { intent: "delete-listen", listenId: String(confirmingDeleteListenId) },
+            { method: "post" }
+          );
+          setConfirmingDeleteListenId(null);
+        }}
+        onCancel={() => setConfirmingDeleteListenId(null)}
+      />
     </div>
   );
 }
