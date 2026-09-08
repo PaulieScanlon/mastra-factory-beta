@@ -7,7 +7,7 @@ type Props = {
 
 const sizeMap = {
   sm: "w-16 h-16 text-[10px] p-2",
-  md: "w-full aspect-square text-lg p-4",
+  md: "w-full aspect-square text-lg p-5 sm:p-4",
   lg: "w-full aspect-square text-2xl p-6"
 };
 

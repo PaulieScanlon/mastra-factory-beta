@@ -90,8 +90,8 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
               <Link to={`/albums/${album.id}`} className="group block">
                 <AlbumCover title={album.title} artist={album.artist} palette={album.palette} />
                 <div className="mt-3">
-                  <div className="text-sm font-medium truncate">{album.title}</div>
-                  <div className="text-xs text-white/50 truncate">{album.artist}</div>
+                  <div className="text-sm font-medium line-clamp-2 sm:line-clamp-1">{album.title}</div>
+                  <div className="text-xs text-white/50 line-clamp-2 sm:line-clamp-1">{album.artist}</div>
                   <div className="mt-2 flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/40">
                     {album.year ? <span>{album.year}</span> : null}
                     {album.genre ? <span>· {album.genre}</span> : null}
