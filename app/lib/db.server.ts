@@ -145,6 +145,37 @@ export const createAlbum = (input: {
   return result.lastInsertRowid as number;
 };
 
+export const updateAlbum = (
+  id: number,
+  input: {
+    title: string;
+    artist: string;
+    year?: number | null;
+    genre?: string | null;
+    palette?: string;
+    notes?: string | null;
+  }
+) => {
+  const existing = getAlbumRow(id);
+  const clearSpotify =
+    existing && (existing.title !== input.title || existing.artist !== input.artist);
+  db.prepare(
+    `UPDATE albums
+        SET title = ?, artist = ?, year = ?, genre = ?, palette = ?, notes = ?,
+            spotify_track_id = CASE WHEN ? THEN NULL ELSE spotify_track_id END
+      WHERE id = ?`
+  ).run(
+    input.title,
+    input.artist,
+    input.year ?? null,
+    input.genre ?? null,
+    input.palette ?? "ember",
+    input.notes ?? null,
+    clearSpotify ? 1 : 0,
+    id
+  );
+};
+
 export const createListen = (input: {
   album_id: number;
   rating?: number | null;
