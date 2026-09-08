@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/home";
-import { listRecentListens, stats } from "../lib/db.server";
+import { listFavoriteAlbums, listRecentListens, stats } from "../lib/db.server";
 import { AlbumCover } from "../components/album-cover";
 
 export const meta: Route.MetaFunction = () => {
@@ -10,7 +10,8 @@ export const meta: Route.MetaFunction = () => {
 export const loader = () => {
   const { totals, topRated } = stats();
   const recent = listRecentListens(8);
-  return { totals, topRated, recent };
+  const favorites = listFavoriteAlbums();
+  return { totals, topRated, recent, favorites };
 };
 
 const relativeDate = (iso: string) => {
@@ -32,7 +33,7 @@ const relativeDate = (iso: string) => {
 };
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { totals, topRated, recent } = loaderData;
+  const { totals, topRated, recent, favorites } = loaderData;
 
   return (
     <div className="space-y-16">
@@ -75,6 +76,36 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             );
           })}
         </ul>
+      </section>
+
+      <section>
+        <SectionHeader title="Favorites" cta={{ label: "Browse albums", to: "/albums" }} />
+        {favorites.length > 0 ? (
+          <ul className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {favorites.slice(0, 8).map((album) => {
+              return (
+                <li key={album.id}>
+                  <Link to={`/albums/${album.id}`} className="group block">
+                    <div className="relative">
+                      <AlbumCover title={album.title} artist={album.artist} palette={album.palette} />
+                      <span className="absolute top-2 right-2 text-2xl leading-none text-red-400 drop-shadow">
+                        ♥
+                      </span>
+                    </div>
+                    <div className="mt-3 min-w-0">
+                      <div className="truncate text-sm font-medium">{album.title}</div>
+                      <div className="truncate text-xs text-white/50">{album.artist}</div>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <div className="text-white/40 text-sm p-6 border border-dashed border-white/10 rounded-xl text-center">
+            No favorites yet — tap the ♥ on any album.
+          </div>
+        )}
       </section>
 
       <section>
