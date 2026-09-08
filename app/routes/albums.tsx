@@ -16,6 +16,7 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
   const genre = params.get("genre") ?? "";
+  const hasFilters = q !== "" || genre !== "";
 
   const genres = Array.from(
     new Set(
@@ -80,6 +81,17 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
               );
             })}
           </select>
+          {hasFilters ? (
+            <button
+              type="button"
+              onClick={() => {
+                setParams(new URLSearchParams(), { replace: true });
+              }}
+              className="px-4 py-2 rounded-full text-sm bg-white/5 border border-white/10 text-white/60 hover:text-white focus:outline-none focus:border-white/25"
+            >
+              Clear filters
+            </button>
+          ) : null}
         </div>
       </div>
 
