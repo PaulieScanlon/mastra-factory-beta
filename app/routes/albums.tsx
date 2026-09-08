@@ -43,7 +43,11 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
           <h1 className="font-display text-5xl mt-2">Albums</h1>
         </div>
         <div className="flex items-center gap-2">
+          <label htmlFor="album-search" className="sr-only">
+            Search albums by title or artist
+          </label>
           <input
+            id="album-search"
             type="search"
             value={q}
             onChange={(e) => {
@@ -58,7 +62,11 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
             placeholder="Search title or artist…"
             className="w-64 px-4 py-2 rounded-full text-sm bg-white/5 border border-white/10 placeholder:text-white/30 focus:outline-none focus:border-white/25"
           />
+          <label htmlFor="genre-filter" className="sr-only">
+            Filter by genre
+          </label>
           <select
+            id="genre-filter"
             value={genre}
             onChange={(e) => {
               const next = new URLSearchParams(params);
