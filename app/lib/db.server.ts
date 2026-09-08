@@ -71,19 +71,55 @@ export const getAlbumRow = (id: number) => {
   return db.prepare<[number], Album>(`SELECT * FROM albums WHERE id = ?`).get(id);
 };
 
-export const listAlbums = () => {
+export const ALBUMS_PAGE_SIZE = 24;
+export const LISTENS_PAGE_SIZE = 50;
+
+const clampPage = (page: number, total: number, size: number) => {
+  const pageCount = Math.max(1, Math.ceil(total / size));
+  const clamped = Math.min(Math.max(1, Math.floor(page) || 1), pageCount);
+  return { page: clamped, pageCount };
+};
+
+export const listGenres = () => {
   return db
-    .prepare<[], AlbumWithStats>(
+    .prepare<[], { genre: string }>(
+      `SELECT DISTINCT genre FROM albums WHERE genre IS NOT NULL ORDER BY genre`
+    )
+    .all()
+    .map((row) => {
+      return row.genre;
+    });
+};
+
+export const listAlbumsPage = (opts: { q: string; genre: string; page: number }) => {
+  const where = `WHERE (:q = '' OR lower(a.title || ' ' || a.artist) LIKE '%' || lower(:q) || '%')
+      AND (:genre = '' OR a.genre = :genre)`;
+  const { total } = db
+    .prepare<{ q: string; genre: string }, { total: number }>(
+      `SELECT COUNT(*) AS total FROM albums a ${where}`
+    )
+    .get({ q: opts.q, genre: opts.genre })!;
+  const { page, pageCount } = clampPage(opts.page, total, ALBUMS_PAGE_SIZE);
+  const albums = db
+    .prepare<{ q: string; genre: string; limit: number; offset: number }, AlbumWithStats>(
       `SELECT a.*,
               COUNT(l.id) AS listen_count,
               AVG(l.rating) AS avg_rating,
               MAX(l.listened_at) AS last_listened
          FROM albums a
          LEFT JOIN listens l ON l.album_id = a.id
+        ${where}
         GROUP BY a.id
-        ORDER BY a.created_at DESC`
+        ORDER BY a.created_at DESC
+        LIMIT :limit OFFSET :offset`
     )
-    .all();
+    .all({
+      q: opts.q,
+      genre: opts.genre,
+      limit: ALBUMS_PAGE_SIZE,
+      offset: (page - 1) * ALBUMS_PAGE_SIZE
+    });
+  return { albums, total, page, pageCount };
 };
 
 export const getAlbum = (id: number) => {
@@ -119,6 +155,23 @@ export const listRecentListens = (limit: number = 30) => {
       ORDER BY l.listened_at DESC
       LIMIT ?`
   ).all(limit);
+};
+
+export const listListensPage = (pageInput: number) => {
+  const { total } = db
+    .prepare<[], { total: number }>(`SELECT COUNT(*) AS total FROM listens`)
+    .get()!;
+  const { page, pageCount } = clampPage(pageInput, total, LISTENS_PAGE_SIZE);
+  const listens = db
+    .prepare<[number, number], ListenWithAlbum>(
+      `SELECT l.*, a.title AS album_title, a.artist AS album_artist, a.palette
+         FROM listens l
+         JOIN albums a ON a.id = l.album_id
+        ORDER BY l.listened_at DESC
+        LIMIT ? OFFSET ?`
+    )
+    .all(LISTENS_PAGE_SIZE, (page - 1) * LISTENS_PAGE_SIZE);
+  return { listens, total, page, pageCount };
 };
 
 export const createAlbum = (input: {

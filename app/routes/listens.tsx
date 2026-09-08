@@ -1,13 +1,15 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/listens";
-import { listRecentListens } from "../lib/db.server";
+import { listListensPage } from "../lib/db.server";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Listens — Riff" }];
 };
 
-export const loader = () => {
-  return { listens: listRecentListens(200) };
+export const loader = ({ request }: Route.LoaderArgs) => {
+  const url = new URL(request.url);
+  const page = Number(url.searchParams.get("page")) || 1;
+  return listListensPage(page);
 };
 
 const groupByDay = <T extends { listened_at: string }>(items: T[]) => {
@@ -30,7 +32,8 @@ const stars = (n: number | null) => {
 };
 
 export default function Listens({ loaderData }: Route.ComponentProps) {
-  const groups = groupByDay(loaderData.listens);
+  const { listens, page, pageCount } = loaderData;
+  const groups = groupByDay(listens);
 
   return (
     <div className="space-y-10">
@@ -92,6 +95,34 @@ export default function Listens({ loaderData }: Route.ComponentProps) {
           </li>
         ) : null}
       </ol>
+
+      {pageCount > 1 ? (
+        <nav className="flex items-center justify-center gap-4 text-sm">
+          {page > 1 ? (
+            <Link
+              to={page - 1 > 1 ? `?page=${page - 1}` : "?"}
+              className="px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition"
+            >
+              ← Prev
+            </Link>
+          ) : (
+            <span className="px-4 py-2 rounded-full border border-white/5 text-white/25">← Prev</span>
+          )}
+          <span className="text-white/40 tabular-nums">
+            Page {page} of {pageCount}
+          </span>
+          {page < pageCount ? (
+            <Link
+              to={`?page=${page + 1}`}
+              className="px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition"
+            >
+              Next →
+            </Link>
+          ) : (
+            <span className="px-4 py-2 rounded-full border border-white/5 text-white/25">Next →</span>
+          )}
+        </nav>
+      ) : null}
     </div>
   );
 }
