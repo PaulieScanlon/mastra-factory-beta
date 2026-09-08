@@ -2,15 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { Link, redirect, useFetcher, useSubmit } from "react-router";
 import type { Route } from "./+types/album";
 import {
+  clearAlbumCover,
   createListen,
   deleteAlbum,
   getAlbum,
   getAlbumRow,
   listListensForAlbum,
+  setAlbumCover,
   setSpotifyTrackId
 } from "../lib/db.server";
+import { parseCoverForm } from "../lib/cover.server";
 import { searchTrack } from "../lib/spotify.server";
-import { AlbumCover } from "../components/album-cover";
+import { AlbumCover, coverSrcFor } from "../components/album-cover";
 import { ConfirmDialog } from "../components/confirm-dialog";
 
 export const meta: Route.MetaFunction = () => {
@@ -57,6 +60,23 @@ export const action = async ({ params, request }: Route.ActionArgs) => {
     return redirect("/albums");
   }
 
+  if (intent === "set-cover") {
+    const cover = await parseCoverForm(form);
+    if ("error" in cover) {
+      return { coverError: cover.error };
+    }
+    if (!cover.cover_url && !cover.cover_image) {
+      return { coverError: "Paste an image URL or choose a file." };
+    }
+    setAlbumCover(id, cover);
+    return { coverSaved: true };
+  }
+
+  if (intent === "remove-cover") {
+    clearAlbumCover(id);
+    return { coverSaved: true };
+  }
+
   return null;
 };
 
@@ -73,18 +93,81 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
   const submit = useSubmit();
   const fetcher = useFetcher<typeof action>();
   const formRef = useRef<HTMLFormElement>(null);
+  const coverFetcher = useFetcher<typeof action>();
+  const coverFormRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data?.ok) {
+    if (fetcher.state === "idle" && fetcher.data && "ok" in fetcher.data) {
       formRef.current?.reset();
     }
   }, [fetcher.state, fetcher.data]);
+
+  useEffect(() => {
+    if (coverFetcher.state === "idle" && coverFetcher.data && "coverSaved" in coverFetcher.data) {
+      coverFormRef.current?.reset();
+    }
+  }, [coverFetcher.state, coverFetcher.data]);
+
+  const coverError =
+    coverFetcher.data && "coverError" in coverFetcher.data ? coverFetcher.data.coverError : null;
+  const hasCover = Boolean(coverSrcFor(album));
 
   return (
     <div className="space-y-10">
       <div className="grid md:grid-cols-[320px_1fr] gap-10 items-start">
         <div className="max-w-sm space-y-4">
-          <AlbumCover title={album.title} artist={album.artist} palette={album.palette} size="lg" />
+          <AlbumCover
+            title={album.title}
+            artist={album.artist}
+            palette={album.palette}
+            coverSrc={coverSrcFor(album)}
+            size="lg"
+          />
+          <coverFetcher.Form
+            method="post"
+            encType="multipart/form-data"
+            ref={coverFormRef}
+            className="p-4 rounded-2xl border border-white/10 bg-white/[0.03] space-y-3"
+          >
+            <div className="text-xs uppercase tracking-widest text-white/40">Cover image</div>
+            <input
+              type="url"
+              name="cover_url"
+              placeholder="https://example.com/cover.jpg"
+              className="w-full px-4 py-2 rounded-full text-sm bg-white/5 border border-white/10 placeholder:text-white/30 focus:outline-none focus:border-white/25"
+            />
+            <input
+              type="file"
+              name="cover_file"
+              accept="image/jpeg,image/png"
+              className="w-full text-sm text-white/60 file:mr-3 file:px-4 file:py-1.5 file:rounded-full file:border-0 file:text-sm file:bg-white/10 file:text-white hover:file:bg-white/20 file:transition file:cursor-pointer"
+            />
+            {coverError ? <p className="text-sm text-red-400">{coverError}</p> : null}
+            <div className="flex items-center justify-between gap-3">
+              {hasCover ? (
+                <button
+                  type="submit"
+                  name="intent"
+                  value="remove-cover"
+                  disabled={coverFetcher.state !== "idle"}
+                  className="px-4 py-1.5 rounded-full text-sm text-white/60 hover:text-white transition disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              ) : (
+                <span className="text-xs text-white/40">JPG/PNG, max 2 MB</span>
+              )}
+              <button
+                type="submit"
+                name="intent"
+                value="set-cover"
+                disabled={coverFetcher.state !== "idle"}
+                className="px-5 py-1.5 rounded-full text-sm text-black bg-white hover:bg-white/90 transition disabled:opacity-50"
+              >
+                Save cover
+              </button>
+            </div>
+          </coverFetcher.Form>
           {spotifyTrackId ? (
             <div className="rounded-2xl overflow-hidden border border-white/10">
               <iframe

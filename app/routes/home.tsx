@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/home";
 import { listRecentListens, stats } from "../lib/db.server";
-import { AlbumCover } from "../components/album-cover";
+import { AlbumCover, CoverThumb, coverSrcFor } from "../components/album-cover";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Riff — a listening log" }];
@@ -59,7 +59,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               <li key={l.id}>
                 <Link to={`/albums/${l.album_id}`} className="group block">
                   <div className="relative">
-                    <AlbumCover title={l.album_title} artist={l.album_artist} palette={l.palette} />
+                    <AlbumCover
+                      title={l.album_title}
+                      artist={l.album_artist}
+                      palette={l.palette}
+                      coverSrc={coverSrcFor({
+                        id: l.album_id,
+                        cover_url: l.cover_url,
+                        has_cover_image: l.has_cover_image
+                      })}
+                    />
                   </div>
                   <div className="mt-3 flex items-baseline justify-between gap-2">
                     <div className="min-w-0">
@@ -90,7 +99,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                   {String(i + 1).padStart(2, "0")}
                 </div>
                 <div className="w-14 h-14 shrink-0">
-                  <div className={`cover palette-${row.palette} w-14 h-14 rounded-lg`} />
+                  <CoverThumb
+                    coverSrc={coverSrcFor(row)}
+                    palette={row.palette}
+                    className="w-14 h-14 rounded-lg"
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{row.title}</div>

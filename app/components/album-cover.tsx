@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
+
 type Props = {
   title: string;
   artist: string;
   palette: string;
+  coverSrc?: string | null;
   size?: "sm" | "md" | "lg";
 };
 
@@ -11,7 +14,76 @@ const sizeMap = {
   lg: "w-full aspect-square text-2xl p-6"
 };
 
-export const AlbumCover = ({ title, artist, palette, size = "md" }: Props) => {
+const imageSizeMap = {
+  sm: "w-16 h-16",
+  md: "w-full aspect-square",
+  lg: "w-full aspect-square"
+};
+
+export const coverSrcFor = (album: {
+  id: number;
+  cover_url: string | null;
+  has_cover_image: 0 | 1;
+}) => {
+  if (album.has_cover_image) {
+    return `/albums/${album.id}/cover`;
+  }
+  return album.cover_url;
+};
+
+export const CoverThumb = ({
+  coverSrc,
+  palette,
+  className
+}: {
+  coverSrc: string | null;
+  palette: string;
+  className: string;
+}) => {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [coverSrc]);
+
+  if (coverSrc && !failed) {
+    return (
+      <img
+        src={coverSrc}
+        alt=""
+        className={`${className} object-cover`}
+        onError={() => {
+          setFailed(true);
+        }}
+      />
+    );
+  }
+  return <div className={`cover palette-${palette} ${className}`} />;
+};
+
+export const AlbumCover = ({ title, artist, palette, coverSrc, size = "md" }: Props) => {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [coverSrc]);
+
+  if (coverSrc && !failed) {
+    return (
+      <div className={`${imageSizeMap[size]} rounded-xl relative overflow-hidden shadow-2xl shadow-black/50`}>
+        <img
+          src={coverSrc}
+          alt={`${title} by ${artist}`}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={() => {
+            setFailed(true);
+          }}
+        />
+        <span className="cover-shine" />
+      </div>
+    );
+  }
+
   const initials = title
     .split(" ")
     .filter((word) => {
