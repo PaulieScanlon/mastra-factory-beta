@@ -1,39 +1,36 @@
 import { Link, useSearchParams } from "react-router";
 import type { Route } from "./+types/albums";
-import { listAlbums } from "../lib/db.server";
+import { listAlbumsPage, listGenres } from "../lib/db.server";
 import { AlbumCover } from "../components/album-cover";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Albums — Riff" }];
 };
 
-export const loader = () => {
-  return { albums: listAlbums() };
+export const loader = ({ request }: Route.LoaderArgs) => {
+  const url = new URL(request.url);
+  const q = url.searchParams.get("q") ?? "";
+  const genre = url.searchParams.get("genre") ?? "";
+  const page = Number(url.searchParams.get("page")) || 1;
+  return { ...listAlbumsPage({ q, genre, page }), genres: listGenres() };
+};
+
+const pageLink = (params: URLSearchParams, page: number) => {
+  const next = new URLSearchParams(params);
+  if (page > 1) {
+    next.set("page", String(page));
+  } else {
+    next.delete("page");
+  }
+  const s = next.toString();
+  return s ? `?${s}` : "?";
 };
 
 export default function Albums({ loaderData }: Route.ComponentProps) {
-  const { albums } = loaderData;
+  const { albums, genres, page, pageCount } = loaderData;
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
   const genre = params.get("genre") ?? "";
-
-  const genres = Array.from(
-    new Set(
-      albums
-        .map((a) => {
-          return a.genre;
-        })
-        .filter((g): g is string => {
-          return Boolean(g);
-        })
-    )
-  );
-
-  const filtered = albums.filter((a) => {
-    const matchesQ = q === "" || `${a.title} ${a.artist}`.toLowerCase().includes(q.toLowerCase());
-    const matchesGenre = genre === "" || a.genre === genre;
-    return matchesQ && matchesGenre;
-  });
 
   return (
     <div className="space-y-8">
@@ -53,6 +50,7 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
               } else {
                 next.delete("q");
               }
+              next.delete("page");
               setParams(next, { replace: true });
             }}
             placeholder="Search title or artist…"
@@ -67,6 +65,7 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
               } else {
                 next.delete("genre");
               }
+              next.delete("page");
               setParams(next, { replace: true });
             }}
             className="px-4 py-2 rounded-full text-sm bg-white/5 border border-white/10 focus:outline-none focus:border-white/25"
@@ -84,7 +83,7 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
       </div>
 
       <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
-        {filtered.map((album) => {
+        {albums.map((album) => {
           return (
             <li key={album.id}>
               <Link to={`/albums/${album.id}`} className="group block">
@@ -103,7 +102,7 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
         })}
       </ul>
 
-      {filtered.length === 0 ? (
+      {albums.length === 0 ? (
         <div className="text-white/40 text-sm p-12 border border-dashed border-white/10 rounded-xl text-center">
           No albums matched.{" "}
           <button
@@ -116,6 +115,34 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
             Clear filters
           </button>
         </div>
+      ) : null}
+
+      {pageCount > 1 ? (
+        <nav className="flex items-center justify-center gap-4 text-sm">
+          {page > 1 ? (
+            <Link
+              to={pageLink(params, page - 1)}
+              className="px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition"
+            >
+              ← Prev
+            </Link>
+          ) : (
+            <span className="px-4 py-2 rounded-full border border-white/5 text-white/25">← Prev</span>
+          )}
+          <span className="text-white/40 tabular-nums">
+            Page {page} of {pageCount}
+          </span>
+          {page < pageCount ? (
+            <Link
+              to={pageLink(params, page + 1)}
+              className="px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition"
+            >
+              Next →
+            </Link>
+          ) : (
+            <span className="px-4 py-2 rounded-full border border-white/5 text-white/25">Next →</span>
+          )}
+        </nav>
       ) : null}
     </div>
   );
