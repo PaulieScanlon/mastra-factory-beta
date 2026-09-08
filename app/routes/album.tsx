@@ -89,7 +89,11 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
                 style={{ border: 0 }}
               />
             </div>
-          ) : null}
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] h-20 flex items-center justify-center">
+              <p className="text-sm text-white/40">No preview available</p>
+            </div>
+          )}
         </div>
         <div className="space-y-6">
           <div>
