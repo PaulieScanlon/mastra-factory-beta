@@ -70,6 +70,7 @@ const stars = (rating: number | null) => {
 export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
   const { album, listens, spotifyTrackId } = loaderData;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [rating, setRating] = useState<number | null>(null);
   const submit = useSubmit();
 
   return (
@@ -129,13 +130,30 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
                   {[1, 2, 3, 4, 5].map((n) => {
                     return (
                       <label key={n} className="cursor-pointer">
-                        <input type="radio" name="rating" value={n} className="peer sr-only" />
+                        <input
+                          type="radio"
+                          name="rating"
+                          value={n}
+                          checked={rating === n}
+                          onChange={() => setRating(n)}
+                          className="peer sr-only"
+                        />
                         <span className="peer-checked:text-yellow-300 text-2xl text-white/20 hover:text-white/50 transition">
                           ★
                         </span>
                       </label>
                     );
                   })}
+                  {rating !== null ? (
+                    <button
+                      type="button"
+                      onClick={() => setRating(null)}
+                      aria-label="Clear rating"
+                      className="ml-2 text-xs text-white/40 hover:text-white/70 transition"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
                 </div>
               </div>
               <div className="flex-1">
