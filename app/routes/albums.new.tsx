@@ -1,6 +1,7 @@
 import { Form, Link, redirect } from "react-router";
 import type { Route } from "./+types/albums.new";
 import { createAlbum } from "../lib/db.server";
+import { parseCoverForm } from "../lib/cover.server";
 
 const palettes = ["ember", "aurora", "storm", "citrus", "mono", "violet", "coast", "rust"];
 
@@ -21,13 +22,19 @@ export const action = async ({ request }: Route.ActionArgs) => {
     return { error: "Title and artist are required." };
   }
 
+  const cover = await parseCoverForm(form);
+  if ("error" in cover) {
+    return { error: cover.error };
+  }
+
   const id = createAlbum({
     title,
     artist,
     year: yearRaw ? Number(yearRaw) : null,
     genre: genre || null,
     palette,
-    notes: notes || null
+    notes: notes || null,
+    ...cover
   });
 
   return redirect(`/albums/${id}`);
@@ -44,12 +51,40 @@ export default function NewAlbum({ actionData }: Route.ComponentProps) {
         <p className="mt-2 text-white/60">A quick entry — just enough to log listens against.</p>
       </div>
 
-      <Form method="post" className="space-y-6">
+      <Form method="post" encType="multipart/form-data" className="space-y-6">
         <Field label="Title" name="title" required placeholder="Kid A" />
         <Field label="Artist" name="artist" required placeholder="Radiohead" />
         <div className="grid grid-cols-2 gap-6">
           <Field label="Year" name="year" type="number" placeholder="2000" />
           <Field label="Genre" name="genre" placeholder="Art rock" />
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs uppercase tracking-widest text-white/40 block mb-2">
+              Cover image URL
+            </label>
+            <input
+              type="url"
+              name="cover_url"
+              placeholder="https://example.com/cover.jpg"
+              className="w-full px-4 py-3 rounded-2xl text-sm bg-white/5 border border-white/10 placeholder:text-white/30 focus:outline-none focus:border-white/25"
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-white/40 block mb-2">
+              Or upload a cover (JPG/PNG, max 2 MB)
+            </label>
+            <input
+              type="file"
+              name="cover_file"
+              accept="image/jpeg,image/png"
+              className="w-full text-sm text-white/60 file:mr-4 file:px-4 file:py-2 file:rounded-full file:border-0 file:text-sm file:bg-white/10 file:text-white hover:file:bg-white/20 file:transition file:cursor-pointer"
+            />
+          </div>
+          <p className="text-xs text-white/40">
+            The palette below is used when no cover image is set.
+          </p>
         </div>
 
         <div>

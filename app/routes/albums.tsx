@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from "react-router";
 import type { Route } from "./+types/albums";
 import { listAlbums } from "../lib/db.server";
-import { AlbumCover } from "../components/album-cover";
+import { AlbumCover, coverSrcFor } from "../components/album-cover";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Albums — Riff" }];
@@ -88,7 +88,12 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
           return (
             <li key={album.id}>
               <Link to={`/albums/${album.id}`} className="group block">
-                <AlbumCover title={album.title} artist={album.artist} palette={album.palette} />
+                <AlbumCover
+                  title={album.title}
+                  artist={album.artist}
+                  palette={album.palette}
+                  coverSrc={coverSrcFor(album)}
+                />
                 <div className="mt-3">
                   <div className="text-sm font-medium truncate">{album.title}</div>
                   <div className="text-xs text-white/50 truncate">{album.artist}</div>

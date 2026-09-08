@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/listens";
 import { listRecentListens } from "../lib/db.server";
+import { CoverThumb, coverSrcFor } from "../components/album-cover";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Listens — Riff" }];
@@ -59,7 +60,15 @@ export default function Listens({ loaderData }: Route.ComponentProps) {
                         to={`/albums/${l.album_id}`}
                         className="group flex items-center gap-4 p-3 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition"
                       >
-                        <div className={`cover palette-${l.palette} w-12 h-12 rounded-lg shrink-0`} />
+                        <CoverThumb
+                          coverSrc={coverSrcFor({
+                            id: l.album_id,
+                            cover_url: l.cover_url,
+                            has_cover_image: l.has_cover_image
+                          })}
+                          palette={l.palette}
+                          className="w-12 h-12 rounded-lg shrink-0"
+                        />
                         <div className="min-w-0 flex-1">
                           <div className="truncate">
                             <span className="font-medium">{l.album_title}</span>
