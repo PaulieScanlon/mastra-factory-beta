@@ -7,6 +7,7 @@ import {
   getAlbum,
   getAlbumRow,
   listListensForAlbum,
+  setFavorite,
   setSpotifyTrackId
 } from "../lib/db.server";
 import { searchTrack } from "../lib/spotify.server";
@@ -57,6 +58,11 @@ export const action = async ({ params, request }: Route.ActionArgs) => {
     return redirect("/albums");
   }
 
+  if (intent === "toggle-favorite") {
+    setFavorite(id, form.get("favorite") === "1");
+    return { ok: true };
+  }
+
   return null;
 };
 
@@ -72,7 +78,12 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const submit = useSubmit();
   const fetcher = useFetcher<typeof action>();
+  const favFetcher = useFetcher();
   const formRef = useRef<HTMLFormElement>(null);
+
+  const isFavorite = favFetcher.formData
+    ? favFetcher.formData.get("favorite") === "1"
+    : album.favorite === 1;
 
   useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data?.ok) {
@@ -105,9 +116,26 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
               {album.year ? `${album.year} · ` : ""}
               {album.genre ?? "Unfiled"}
             </p>
-            <h1 className="font-display text-6xl mt-3 tracking-tight leading-none">
-              {album.title}
-            </h1>
+            <div className="flex items-start gap-4">
+              <h1 className="font-display text-6xl mt-3 tracking-tight leading-none">
+                {album.title}
+              </h1>
+              <favFetcher.Form method="post" className="mt-3 shrink-0">
+                <input type="hidden" name="intent" value="toggle-favorite" />
+                <input type="hidden" name="favorite" value={isFavorite ? "0" : "1"} />
+                <button
+                  type="submit"
+                  aria-pressed={isFavorite}
+                  aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                  title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                  className={`text-4xl leading-none transition ${
+                    isFavorite ? "text-red-400 hover:text-red-300" : "text-white/30 hover:text-white/60"
+                  }`}
+                >
+                  {isFavorite ? "♥" : "♡"}
+                </button>
+              </favFetcher.Form>
+            </div>
             <p className="mt-3 text-2xl text-white/70">{album.artist}</p>
           </div>
           {album.notes ? (

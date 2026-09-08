@@ -1,6 +1,6 @@
-import { Link, useSearchParams } from "react-router";
+import { Link, useFetcher, useSearchParams } from "react-router";
 import type { Route } from "./+types/albums";
-import { listAlbums } from "../lib/db.server";
+import { listAlbums, type AlbumWithStats } from "../lib/db.server";
 import { AlbumCover } from "../components/album-cover";
 
 export const meta: Route.MetaFunction = () => {
@@ -85,21 +85,7 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
 
       <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
         {filtered.map((album) => {
-          return (
-            <li key={album.id}>
-              <Link to={`/albums/${album.id}`} className="group block">
-                <AlbumCover title={album.title} artist={album.artist} palette={album.palette} />
-                <div className="mt-3">
-                  <div className="text-sm font-medium truncate">{album.title}</div>
-                  <div className="text-xs text-white/50 truncate">{album.artist}</div>
-                  <div className="mt-2 flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/40">
-                    {album.year ? <span>{album.year}</span> : null}
-                    {album.genre ? <span>· {album.genre}</span> : null}
-                  </div>
-                </div>
-              </Link>
-            </li>
-          );
+          return <AlbumCard key={album.id} album={album} />;
         })}
       </ul>
 
@@ -120,3 +106,41 @@ export default function Albums({ loaderData }: Route.ComponentProps) {
     </div>
   );
 }
+
+const AlbumCard = ({ album }: { album: AlbumWithStats }) => {
+  const fetcher = useFetcher();
+  const isFavorite = fetcher.formData
+    ? fetcher.formData.get("favorite") === "1"
+    : album.favorite === 1;
+
+  return (
+    <li className="relative">
+      <Link to={`/albums/${album.id}`} className="group block">
+        <AlbumCover title={album.title} artist={album.artist} palette={album.palette} />
+        <div className="mt-3">
+          <div className="text-sm font-medium truncate">{album.title}</div>
+          <div className="text-xs text-white/50 truncate">{album.artist}</div>
+          <div className="mt-2 flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/40">
+            {album.year ? <span>{album.year}</span> : null}
+            {album.genre ? <span>· {album.genre}</span> : null}
+          </div>
+        </div>
+      </Link>
+      <fetcher.Form method="post" action={`/albums/${album.id}`} className="absolute top-2 right-2 z-10">
+        <input type="hidden" name="intent" value="toggle-favorite" />
+        <input type="hidden" name="favorite" value={isFavorite ? "0" : "1"} />
+        <button
+          type="submit"
+          aria-pressed={isFavorite}
+          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+          title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+          className={`text-2xl leading-none drop-shadow transition ${
+            isFavorite ? "text-red-400 hover:text-red-300" : "text-white/40 hover:text-white/80"
+          }`}
+        >
+          {isFavorite ? "♥" : "♡"}
+        </button>
+      </fetcher.Form>
+    </li>
+  );
+};

@@ -17,6 +17,7 @@ db.exec(`
     palette TEXT NOT NULL DEFAULT 'ember',
     notes TEXT,
     spotify_track_id TEXT,
+    favorite INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE TABLE IF NOT EXISTS listens (
@@ -35,6 +36,9 @@ const albumCols = db.prepare("PRAGMA table_info(albums)").all() as { name: strin
 if (!albumCols.some((c) => { return c.name === "spotify_track_id"; })) {
   db.exec("ALTER TABLE albums ADD COLUMN spotify_track_id TEXT");
 }
+if (!albumCols.some((c) => { return c.name === "favorite"; })) {
+  db.exec("ALTER TABLE albums ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0");
+}
 
 const albumCount = db.prepare("SELECT COUNT(*) AS n FROM albums").get() as { n: number };
 if (albumCount.n === 0) {
@@ -50,6 +54,7 @@ export type Album = {
   palette: string;
   notes: string | null;
   spotify_track_id: string | null;
+  favorite: number;
   created_at: string;
 };
 
@@ -164,6 +169,26 @@ export const deleteAlbum = (id: number) => {
 
 export const setSpotifyTrackId = (albumId: number, trackId: string | null) => {
   db.prepare("UPDATE albums SET spotify_track_id = ? WHERE id = ?").run(trackId, albumId);
+};
+
+export const setFavorite = (albumId: number, favorite: boolean) => {
+  db.prepare("UPDATE albums SET favorite = ? WHERE id = ?").run(favorite ? 1 : 0, albumId);
+};
+
+export const listFavoriteAlbums = () => {
+  return db
+    .prepare<[], AlbumWithStats>(
+      `SELECT a.*,
+              COUNT(l.id) AS listen_count,
+              AVG(l.rating) AS avg_rating,
+              MAX(l.listened_at) AS last_listened
+         FROM albums a
+         LEFT JOIN listens l ON l.album_id = a.id
+        WHERE a.favorite = 1
+        GROUP BY a.id
+        ORDER BY a.created_at DESC`
+    )
+    .all();
 };
 
 export const stats = () => {
