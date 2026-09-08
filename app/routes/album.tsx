@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Form, Link, redirect, useSubmit } from "react-router";
+import { useEffect, useState } from "react";
+import { Form, Link, redirect, useSearchParams, useSubmit } from "react-router";
 import type { Route } from "./+types/album";
 import {
   createListen,
@@ -12,6 +12,7 @@ import {
 import { searchTrack } from "../lib/spotify.server";
 import { AlbumCover } from "../components/album-cover";
 import { ConfirmDialog } from "../components/confirm-dialog";
+import { Toast } from "../components/toast";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Album — Riff" }];
@@ -49,7 +50,7 @@ export const action = async ({ params, request }: Route.ActionArgs) => {
       rating: ratingRaw ? Number(ratingRaw) : null,
       notes: typeof notes === "string" && notes.length > 0 ? notes : null
     });
-    return null;
+    return { ok: "listen" as const, at: Date.now() };
   }
 
   if (intent === "delete") {
@@ -67,10 +68,31 @@ const stars = (rating: number | null) => {
   return "★".repeat(rating) + "☆".repeat(Math.max(0, 5 - rating));
 };
 
-export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
+export default function AlbumRoute({ loaderData, actionData }: Route.ComponentProps) {
   const { album, listens, spotifyTrackId } = loaderData;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [toast, setToast] = useState<{ message: string; key: number } | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const submit = useSubmit();
+
+  useEffect(() => {
+    if (actionData && "ok" in actionData && actionData.ok === "listen") {
+      setToast({ message: "Listen logged", key: actionData.at });
+    }
+  }, [actionData]);
+
+  useEffect(() => {
+    if (searchParams.get("added")) {
+      setToast({ message: "Album added", key: Date.now() });
+      setSearchParams(
+        (prev) => {
+          prev.delete("added");
+          return prev;
+        },
+        { replace: true, preventScrollReset: true }
+      );
+    }
+  }, [searchParams, setSearchParams]);
 
   return (
     <div className="space-y-10">
@@ -215,6 +237,10 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
         onConfirm={() => submit({ intent: "delete" }, { method: "post" })}
         onCancel={() => setConfirmingDelete(false)}
       />
+
+      {toast ? (
+        <Toast key={toast.key} message={toast.message} onDismiss={() => setToast(null)} />
+      ) : null}
     </div>
   );
 }

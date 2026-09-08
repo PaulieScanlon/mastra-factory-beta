@@ -30,7 +30,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
     notes: notes || null
   });
 
-  return redirect(`/albums/${id}`);
+  return redirect(`/albums/${id}?added=1`);
 };
 
 export default function NewAlbum({ actionData }: Route.ComponentProps) {
