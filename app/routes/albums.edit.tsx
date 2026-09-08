@@ -1,0 +1,148 @@
+import { Form, Link, redirect } from "react-router";
+import type { Route } from "./+types/albums.edit";
+import { getAlbumRow, updateAlbum } from "../lib/db.server";
+
+const palettes = ["ember", "aurora", "storm", "citrus", "mono", "violet", "coast", "rust"];
+
+export const meta: Route.MetaFunction = () => {
+  return [{ title: "Edit album — Riff" }];
+};
+
+export const loader = async ({ params }: Route.LoaderArgs) => {
+  const album = getAlbumRow(Number(params.id));
+  if (!album) {
+    throw new Response("Not found", { status: 404 });
+  }
+  return { album };
+};
+
+export const action = async ({ params, request }: Route.ActionArgs) => {
+  const form = await request.formData();
+  const title = String(form.get("title") ?? "").trim();
+  const artist = String(form.get("artist") ?? "").trim();
+  const yearRaw = form.get("year");
+  const genre = String(form.get("genre") ?? "").trim();
+  const palette = String(form.get("palette") ?? "ember");
+  const notes = String(form.get("notes") ?? "").trim();
+
+  if (!title || !artist) {
+    return { error: "Title and artist are required." };
+  }
+
+  updateAlbum(Number(params.id), {
+    title,
+    artist,
+    year: yearRaw ? Number(yearRaw) : null,
+    genre: genre || null,
+    palette,
+    notes: notes || null
+  });
+
+  return redirect(`/albums/${params.id}`);
+};
+
+export default function EditAlbum({ loaderData, actionData }: Route.ComponentProps) {
+  const { album } = loaderData;
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-8">
+        <Link to={`/albums/${album.id}`} className="text-sm text-white/50 hover:text-white transition">
+          ← Back to album
+        </Link>
+        <h1 className="font-display text-5xl mt-3">Edit album</h1>
+        <p className="mt-2 text-white/60">Fix a typo or update the details.</p>
+      </div>
+
+      <Form method="post" className="space-y-6">
+        <Field label="Title" name="title" required placeholder="Kid A" defaultValue={album.title} />
+        <Field label="Artist" name="artist" required placeholder="Radiohead" defaultValue={album.artist} />
+        <div className="grid grid-cols-2 gap-6">
+          <Field label="Year" name="year" type="number" placeholder="2000" defaultValue={album.year ?? ""} />
+          <Field label="Genre" name="genre" placeholder="Art rock" defaultValue={album.genre ?? ""} />
+        </div>
+
+        <div>
+          <label className="text-xs uppercase tracking-widest text-white/40 block mb-3">Cover palette</label>
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+            {palettes.map((p) => {
+              return (
+                <label key={p} className="cursor-pointer">
+                  <input
+                    type="radio"
+                    name="palette"
+                    value={p}
+                    defaultChecked={p === album.palette}
+                    className="peer sr-only"
+                  />
+                  <div
+                    className={`cover palette-${p} aspect-square rounded-lg border-2 border-transparent peer-checked:border-white transition`}
+                  />
+                  <div className="text-[10px] uppercase tracking-widest text-white/40 text-center mt-1">
+                    {p}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs uppercase tracking-widest text-white/40 block mb-2">Notes</label>
+          <textarea
+            name="notes"
+            rows={3}
+            placeholder="First impression, a lyric that stuck…"
+            defaultValue={album.notes ?? ""}
+            className="w-full px-4 py-3 rounded-2xl text-sm bg-white/5 border border-white/10 placeholder:text-white/30 focus:outline-none focus:border-white/25 resize-none"
+          />
+        </div>
+
+        {actionData?.error ? (
+          <p className="text-sm text-red-400">{actionData.error}</p>
+        ) : null}
+
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Link
+            to={`/albums/${album.id}`}
+            className="px-5 py-2 rounded-full text-sm text-white/60 hover:text-white transition"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            className="px-6 py-2 rounded-full text-sm text-black bg-white hover:bg-white/90 transition"
+          >
+            Save changes
+          </button>
+        </div>
+      </Form>
+    </div>
+  );
+}
+
+type FieldProps = {
+  label: string;
+  name: string;
+  required?: boolean;
+  placeholder?: string;
+  type?: string;
+  defaultValue?: string | number;
+};
+
+const Field = ({ label, name, required, placeholder, type = "text", defaultValue }: FieldProps) => {
+  return (
+    <div>
+      <label className="text-xs uppercase tracking-widest text-white/40 block mb-2">
+        {label} {required ? <span className="text-white/30">*</span> : null}
+      </label>
+      <input
+        type={type}
+        name={name}
+        required={required}
+        placeholder={placeholder}
+        defaultValue={defaultValue}
+        className="w-full px-4 py-3 rounded-2xl text-sm bg-white/5 border border-white/10 placeholder:text-white/30 focus:outline-none focus:border-white/25"
+      />
+    </div>
+  );
+};

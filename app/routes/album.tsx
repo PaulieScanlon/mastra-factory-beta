@@ -210,13 +210,21 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
               ← Back to albums
             </Link>
           </div>
-          <button
-            type="button"
-            className="text-xs text-red-400/70 hover:text-red-300 uppercase tracking-widest"
-            onClick={() => setConfirmingDelete(true)}
-          >
-            Delete album
-          </button>
+          <div className="flex items-center gap-6">
+            <Link
+              to={`/albums/${album.id}/edit`}
+              className="text-xs text-white/50 hover:text-white uppercase tracking-widest"
+            >
+              Edit album
+            </Link>
+            <button
+              type="button"
+              className="text-xs text-red-400/70 hover:text-red-300 uppercase tracking-widest"
+              onClick={() => setConfirmingDelete(true)}
+            >
+              Delete album
+            </button>
+          </div>
         </div>
       </div>
 
