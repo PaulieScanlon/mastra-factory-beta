@@ -66,7 +66,7 @@ export default function NewAlbum({ actionData }: Route.ComponentProps) {
                     className="peer sr-only"
                   />
                   <div
-                    className={`cover palette-${p} aspect-square rounded-lg border-2 border-transparent peer-checked:border-white transition`}
+                    className={`cover palette-${p} aspect-square rounded-lg border-2 border-transparent peer-checked:border-white peer-focus-visible:ring-2 peer-focus-visible:ring-white/70 transition`}
                   />
                   <div className="text-[10px] uppercase tracking-widest text-white/40 text-center mt-1">
                     {p}

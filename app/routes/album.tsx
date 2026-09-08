@@ -126,7 +126,7 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
                     return (
                       <label key={n} className="cursor-pointer">
                         <input type="radio" name="rating" value={n} className="peer sr-only" />
-                        <span className="peer-checked:text-yellow-300 text-2xl text-white/20 hover:text-white/50 transition">
+                        <span className="peer-checked:text-yellow-300 text-2xl text-white/20 hover:text-white/50 peer-focus-visible:ring-2 peer-focus-visible:ring-white/70 peer-focus-visible:text-white/60 rounded transition inline-block px-0.5">
                           ★
                         </span>
                       </label>
