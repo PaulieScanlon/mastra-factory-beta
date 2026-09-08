@@ -40,7 +40,15 @@ export const ConfirmDialog = ({
         }
       }}
       onClick={(e) => {
-        if (e.target === dialogRef.current) {
+        // Only clicks on the ::backdrop land outside the dialog's box;
+        // clicks in the dialog's own padding hit the element but are inside it.
+        const rect = e.currentTarget.getBoundingClientRect();
+        const insideDialog =
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom;
+        if (!insideDialog) {
           onCancel();
         }
       }}
