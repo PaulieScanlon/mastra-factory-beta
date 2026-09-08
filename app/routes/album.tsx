@@ -43,11 +43,15 @@ export const action = async ({ params, request }: Route.ActionArgs) => {
 
   if (intent === "listen") {
     const ratingRaw = form.get("rating");
-    const notes = form.get("notes");
+    const rating = ratingRaw ? Number(ratingRaw) : null;
+    const notes = String(form.get("notes") ?? "").trim();
+    if (rating === null && !notes) {
+      return { error: "Add a rating or a note before logging a listen." };
+    }
     createListen({
       album_id: id,
-      rating: ratingRaw ? Number(ratingRaw) : null,
-      notes: typeof notes === "string" && notes.length > 0 ? notes : null
+      rating,
+      notes: notes || null
     });
     return null;
   }
@@ -67,7 +71,7 @@ const stars = (rating: number | null) => {
   return "★".repeat(rating) + "☆".repeat(Math.max(0, 5 - rating));
 };
 
-export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
+export default function AlbumRoute({ loaderData, actionData }: Route.ComponentProps) {
   const { album, listens, spotifyTrackId } = loaderData;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const submit = useSubmit();
@@ -154,6 +158,9 @@ export default function AlbumRoute({ loaderData }: Route.ComponentProps) {
                 Log
               </button>
             </div>
+            {actionData?.error ? (
+              <p className="text-sm text-red-400">{actionData.error}</p>
+            ) : null}
           </Form>
         </div>
       </div>
